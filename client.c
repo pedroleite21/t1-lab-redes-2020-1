@@ -1,4 +1,4 @@
-gcc -pthread -o client client.c
+//gcc -pthread -o client client.c
 
 #include <arpa/inet.h>
 #include <linux/if_packet.h>
@@ -96,7 +96,7 @@ uint32_t ipchksum(uint8_t *packet)
 }
 
 void sending(int argc, char *argv[]){
-
+	printf("got here");
 /* Get interface name */
 	if (argc > 1)
 		strcpy(ifName, argv[1]);
@@ -174,11 +174,12 @@ void sending(int argc, char *argv[]){
 int main(int argc, char *argv[])
 {
 	pthread_t send_thread;//waits for a send request and send
-	pthread_t wait_send_thread;//waits for a receive
+	pthread_t receive_thread;//waits for a receive
 
-	pthread_create(&send_thread, NULL, (void *) sending, NULL);
-
-
+	//pthread_create(&send_thread, NULL, (void *) sending, NULL);
+	//pthread_join(send_thread, NULL);
+	pthread_create(&receive_thread, NULL, (void *) receive, NULL);
+	pthread_join(receive_thread, NULL);
 
 	//receive(argc, argv);
 
