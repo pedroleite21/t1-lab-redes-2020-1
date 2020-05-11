@@ -28,6 +28,14 @@ char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33};
 
 const char* NICK = "NICK";
 const char* JOIN = "JOIN";
+const char* REMOVE = "REMOVE";
+const char* CREATE = "CREATE";
+const char* PART = "PART";
+const char* NAMES = "NAMES";
+const char* KICK = "KICK";
+const char* MSG = "MSG";
+const char* PRIVMSG = "PRIVMSG";
+const char* QUIT = "QUIT";
 
 union eth_buffer buffer_u;
 
@@ -71,14 +79,14 @@ void receive(int argc, char *argv[]){
 	while (1){
 		numbytes = recvfrom(sockfd, buffer_u.raw_data, ETH_LEN, MSG_DONTWAIT , NULL, NULL);
 		if (buffer_u.cooked_data.ethernet.eth_type == ntohs(ETH_P_IP)){
-			printf("IP packet, %d bytes - src ip: %d.%d.%d.%d dst ip: %d.%d.%d.%d proto: %d\n",
-				numbytes,
-				buffer_u.cooked_data.payload.ip.src[0], buffer_u.cooked_data.payload.ip.src[1],
-				buffer_u.cooked_data.payload.ip.src[2], buffer_u.cooked_data.payload.ip.src[3],
-				buffer_u.cooked_data.payload.ip.dst[0], buffer_u.cooked_data.payload.ip.dst[1],
-				buffer_u.cooked_data.payload.ip.dst[2], buffer_u.cooked_data.payload.ip.dst[3],
-				buffer_u.cooked_data.payload.ip.proto
-			);
+			// printf("IP packet, %d bytes - src ip: %d.%d.%d.%d dst ip: %d.%d.%d.%d proto: %d\n",
+				// numbytes,
+				// buffer_u.cooked_data.payload.ip.src[0], buffer_u.cooked_data.payload.ip.src[1],
+				// buffer_u.cooked_data.payload.ip.src[2], buffer_u.cooked_data.payload.ip.src[3],
+				// buffer_u.cooked_data.payload.ip.dst[0], buffer_u.cooked_data.payload.ip.dst[1],
+				// buffer_u.cooked_data.payload.ip.dst[2], buffer_u.cooked_data.payload.ip.dst[3],
+				// buffer_u.cooked_data.payload.ip.proto
+			// );
 			if (buffer_u.cooked_data.payload.ip.proto == PROTO_UDP && buffer_u.cooked_data.payload.udp.udphdr.dst_port == ntohs(DST_PORT)){
 				p = (char *)&buffer_u.cooked_data.payload.udp.udphdr + ntohs(buffer_u.cooked_data.payload.udp.udphdr.udp_len);
 				*p = '\0';
@@ -157,14 +165,14 @@ void sending(int argc, char *argv[]){
 	buffer_u.cooked_data.payload.ip.proto = 17; //0xff;// 17 é o protocolo udp
 	buffer_u.cooked_data.payload.ip.sum = htons(0x0000);//calcula como 0 o checksum para que no final apos incluir os valores corretos, fazer o checksum denoovo e incluí-lo
 
-	buffer_u.cooked_data.payload.ip.src[0] = 192;
-	buffer_u.cooked_data.payload.ip.src[1] = 168;
-	buffer_u.cooked_data.payload.ip.src[2] = 5;
-	buffer_u.cooked_data.payload.ip.src[3] = 25;
-	buffer_u.cooked_data.payload.ip.dst[0] = 192;
-	buffer_u.cooked_data.payload.ip.dst[1] = 168;
-	buffer_u.cooked_data.payload.ip.dst[2] = 6;
-	buffer_u.cooked_data.payload.ip.dst[3] = 6;
+	buffer_u.cooked_data.payload.ip.src[0] = 10;
+	buffer_u.cooked_data.payload.ip.src[1] = 0;
+	buffer_u.cooked_data.payload.ip.src[2] = 0;
+	buffer_u.cooked_data.payload.ip.src[3] = 20;
+	buffer_u.cooked_data.payload.ip.dst[0] = 10;
+	buffer_u.cooked_data.payload.ip.dst[1] = 0;
+	buffer_u.cooked_data.payload.ip.dst[2] = 0;
+	buffer_u.cooked_data.payload.ip.dst[3] = 22;
 	buffer_u.cooked_data.payload.ip.sum = htons((~ipchksum((uint8_t *)&buffer_u.cooked_data.payload.ip) & 0xffff));//pega-se o primeiro byte do cabeçalho ip como endereço para ipchsum executar
 
 	/* Fill UDP header */
@@ -182,7 +190,7 @@ void sending(int argc, char *argv[]){
 		printf("Send failed\n");
 }
 
-int sendTerminal() {
+int sendTerminal(int argc, char *argv[]) {
 	char command[15];
 	char *arg;
 
@@ -198,7 +206,9 @@ int sendTerminal() {
 		toUppercase(command);
 		if (strcmp(command, NICK) == 0) {
 			// enviar pro servidor se tem user name disponivel
-			printf("strings match. nick: %s\n", &arg);
+			sprintf(msg, "%s %s", command, &arg);
+			sending(argc, argv);
+			break;
 		}
 		break;
 	}
