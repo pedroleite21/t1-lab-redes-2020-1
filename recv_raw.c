@@ -187,7 +187,12 @@ int main(int argc, char *argv[])
 
 	while (1){
 		numbytes = recvfrom(sockfd, buffer_u.raw_data, ETH_LEN, MSG_DONTWAIT , NULL, NULL);
-		if (buffer_u.cooked_data.ethernet.eth_type == ntohs(ETH_P_IP) && numbytes > 0){
+		if (buffer_u.cooked_data.ethernet.eth_type == ntohs(ETH_P_IP)
+			&& buffer_u.cooked_data.payload.ip.dst[0] == 10
+			&& buffer_u.cooked_data.payload.ip.dst[1] == 0
+			&& buffer_u.cooked_data.payload.ip.dst[2] == 0
+			&& buffer_u.cooked_data.payload.ip.dst[3] == 22
+		&& numbytes > 0){
 			printf("IP packet, %d bytes - src ip: %d.%d.%d.%d dst ip: %d.%d.%d.%d proto: %d\n",
 				numbytes,
 				buffer_u.cooked_data.payload.ip.src[0], buffer_u.cooked_data.payload.ip.src[1],

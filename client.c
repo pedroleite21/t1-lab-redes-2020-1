@@ -9,14 +9,16 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h> 
+#include <errno.h> 
+#include <netdb.h>
 #include <net/if.h>
 #include <netinet/ether.h>
 #include "raw.h"
 #include <pthread.h>
 #include <ctype.h>
-
-#define TRUE 1
-#define FALSE 0
+#include <ifaddrs.h>
 
 #define PROTO_UDP	17
 #define DST_PORT	8000
@@ -38,6 +40,10 @@ const char* PRIVMSG = "PRIVMSG";
 const char* QUIT = "QUIT";
 
 union eth_buffer buffer_u;
+struct ifaddrs *id;
+
+int hasUser = 1;
+char user[10];
 
 //send
 	struct ifreq if_idx, if_mac, ifopts;
@@ -50,14 +56,50 @@ union eth_buffer buffer_u;
 	char ifName[IFNAMSIZ];
 	int sockfd, numbytes;
 	char *p;
+	char pkgReturn[150];
 
 void toUppercase(char* string)
 {
 	while (*string++ = toupper(*string));
 }
 
-void receive(int argc, char *argv[]){
+int receiveConfirmation(int argc, char *argv[]) {
+	int confirmation = 0;
+	char *message;
+	if (argc > 1)
+		strcpy(ifName, argv[1]);
+	else
+		strcpy(ifName, DEFAULT_IF);
 
+	/* Open RAW socket */
+	if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1)
+		perror("socket");
+	
+	/* Set interface to promiscuous mode */
+	strncpy(ifopts.ifr_name, ifName, IFNAMSIZ-1);
+	ioctl(sockfd, SIOCGIFFLAGS, &ifopts);
+	ifopts.ifr_flags |= IFF_PROMISC;
+	ioctl(sockfd, SIOCSIFFLAGS, &ifopts);
+
+	while(1) {
+		numbytes = recvfrom(sockfd, buffer_u.raw_data, ETH_LEN, MSG_DONTWAIT , NULL, NULL);
+		if (
+			buffer_u.cooked_data.ethernet.eth_type == ntohs(ETH_P_IP) 
+			&& buffer_u.cooked_data.payload.ip.src[0] == 10
+			&& buffer_u.cooked_data.payload.ip.src[1] == 0
+			&& buffer_u.cooked_data.payload.ip.src[2] == 0
+			&& buffer_u.cooked_data.payload.ip.src[3] == 22
+			&& numbytes > 0
+		)	{
+			sscanf((char *)&buffer_u.cooked_data.payload.udp.udphdr + sizeof(struct udp_hdr), "%d %s", &confirmation, &message);
+			return confirmation;
+		};
+	};
+
+	return 1;
+}
+
+void receive(int argc, char *argv[]){
 	/* Get interface name */
 	if (argc > 1)
 		strcpy(ifName, argv[1]);
@@ -116,7 +158,6 @@ uint32_t ipchksum(uint8_t *packet)
 }
 
 void sending(int argc, char *argv[]){
-	printf("got here");
 /* Get interface name */
 	if (argc > 1)
 		strcpy(ifName, argv[1]);
@@ -199,18 +240,31 @@ int sendTerminal(int argc, char *argv[]) {
 	printf("Bem vindo ao Bate-Papo\n");
 
 	while(1) {
-		printf("Você não tem um NICK definido\n");
-		printf("Exemplo: /nick user\n");
-		fflush(stdin);
-		scanf("/%s %s", command, &arg);
-		toUppercase(command);
-		if (strcmp(command, NICK) == 0) {
-			// enviar pro servidor se tem user name disponivel
-			sprintf(msg, "%s %s", command, &arg);
-			sending(argc, argv);
-			break;
+		if (hasUser == 1) {
+			printf("Você não tem um NICK definido\n");
+			printf("Exemplo: /nick user\n");
+			fflush(stdin);
+			scanf("/%s %s", command, &arg);
+			toUppercase(command);
+			if (strcmp(command, NICK) == 0) {
+				// enviar pro servidor se tem user name disponivel
+				sprintf(msg, "%s %s", command, &arg);
+				sending(argc, argv);
+				// wait for confirmation
+				ret = receiveConfirmation(argc,argv);
+				printf("%d\n", ret);
+				if (ret == 0) {
+					hasUser = 0;
+					strcpy(user, &arg);
+				} else {
+					printf("Já tem esse user na nossa database\n");
+					return -1;
+				}
+			}
+		} else {
+			printf("Bem vindo user %s", &user);
+			scanf("%s %s", command, &arg);
 		}
-		break;
 	}
 	
 	return 0;
