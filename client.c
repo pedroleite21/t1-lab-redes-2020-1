@@ -13,6 +13,10 @@
 #include <netinet/ether.h>
 #include "raw.h"
 #include <pthread.h>
+#include <ctype.h>
+
+#define TRUE 1
+#define FALSE 0
 
 #define PROTO_UDP	17
 #define DST_PORT	8000
@@ -21,6 +25,9 @@ char this_mac[6];
 char bcast_mac[6] =	{0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 char dst_mac[6] =	{0x00, 0x00, 0x00, 0x22, 0x22, 0x22};
 char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33};
+
+const char* NICK = "NICK";
+const char* JOIN = "JOIN";
 
 union eth_buffer buffer_u;
 
@@ -35,6 +42,11 @@ union eth_buffer buffer_u;
 	char ifName[IFNAMSIZ];
 	int sockfd, numbytes;
 	char *p;
+
+void toUppercase(char* string)
+{
+	while (*string++ = toupper(*string));
+}
 
 void receive(int argc, char *argv[]){
 
@@ -78,7 +90,7 @@ void receive(int argc, char *argv[]){
 			continue;
 		}
 				
-		printf("got a packet, %d bytes\n", numbytes);
+		// printf("got a packet, %d bytes\n", numbytes);
 	}
 
 }
@@ -168,16 +180,41 @@ void sending(int argc, char *argv[]){
 	memcpy(socket_address.sll_addr, dst_mac, 6);
 	if (sendto(sockfd, buffer_u.raw_data, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + sizeof(struct udp_hdr) + strlen(msg), 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
 		printf("Send failed\n");
-
 }
+
+int sendTerminal() {
+	char command[15];
+	char *arg;
+
+	int ret;
+
+	printf("Bem vindo ao Bate-Papo\n");
+
+	while(1) {
+		printf("Você não tem um NICK definido\n");
+		printf("Exemplo: /nick user\n");
+		fflush(stdin);
+		scanf("/%s %s", command, &arg);
+		toUppercase(command);
+		if (strcmp(command, NICK) == 0) {
+			// enviar pro servidor se tem user name disponivel
+			printf("strings match. nick: %s\n", &arg);
+		}
+		break;
+	}
+	
+	return 0;
+}
+
+
 
 int main(int argc, char *argv[])
 {
 	pthread_t send_thread;//waits for a send request and send
 	pthread_t receive_thread;//waits for a receive
 
-	//pthread_create(&send_thread, NULL, (void *) sending, NULL);
-	//pthread_join(send_thread, NULL);
+	pthread_create(&send_thread, NULL, (void *) sendTerminal, NULL);
+	pthread_join(send_thread, NULL);
 	pthread_create(&receive_thread, NULL, (void *) receive, NULL);
 	pthread_join(receive_thread, NULL);
 
