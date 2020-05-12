@@ -36,6 +36,7 @@ const char* KICK = "KICK";
 const char* MSG = "MSG";
 const char* PRIVMSG = "PRIVMSG";
 const char* QUIT = "QUIT";
+const char* LIST = "LIST";
 
 union eth_buffer buffer_u;
 union eth_buffer buffer_send;
@@ -45,11 +46,17 @@ struct PROFILES {
 	char ip[4];
 };
 
+struct CHANNELS {
+	char *name;
+	struct PROFILES users[5];
+};
+
 struct PROFILES users[100];
+struct CHANNELS channels[20];
 
 bool isUsernameDuplicated(char *user) {
 	int i = 0;
-	for (i; i < 99; i++) {
+	for (i; i < sizeof(users); i++) {
 		if (users[i].user == NULL) {
 			users[i].user = user;
 			printf("%s\n", &users[i].user);
@@ -64,6 +71,24 @@ bool isUsernameDuplicated(char *user) {
 
 	return 0;
 }
+
+bool isChannelDuplicated(char *name) {
+	int i = 0;
+	for (i; i < sizeof(channels); i++) {
+		if (channels[i].name == NULL) {
+			channels[i].name = name;
+			printf("%s\n", &channels[i].name);
+			return 0;
+		}
+		if (strcmp(&channels[i].name, &name) == 0) {
+			printf("%s %s\n", &channels[i].name, &name);
+			printf("Já existe\n");
+			return 1;	
+		};
+	};
+
+	return 0;
+};
 
 uint32_t ipchksum(uint8_t *packet)
 {
@@ -203,14 +228,14 @@ int main(int argc, char *argv[])
 			);
 			fromClient = (char *)&buffer_u.cooked_data.payload.udp.udphdr + sizeof(struct udp_hdr);
 			sscanf(fromClient, "%s %s %s %s", &command, &arg1, &arg2, &arg3);
+			
+			buffer_send.cooked_data.payload.ip.dst[0] = buffer_u.cooked_data.payload.ip.src[0]; 
+			buffer_send.cooked_data.payload.ip.dst[1] = buffer_u.cooked_data.payload.ip.src[1]; 
+			buffer_send.cooked_data.payload.ip.dst[2] = buffer_u.cooked_data.payload.ip.src[2]; 
+			buffer_send.cooked_data.payload.ip.dst[3] = buffer_u.cooked_data.payload.ip.src[3];
 
 			// COMMAND NICK
-			if (strcmp(command, NICK) == 0) {
-				buffer_send.cooked_data.payload.ip.dst[0] = buffer_u.cooked_data.payload.ip.src[0]; 
-				buffer_send.cooked_data.payload.ip.dst[1] = buffer_u.cooked_data.payload.ip.src[1]; 
-				buffer_send.cooked_data.payload.ip.dst[2] = buffer_u.cooked_data.payload.ip.src[2]; 
-				buffer_send.cooked_data.payload.ip.dst[3] = buffer_u.cooked_data.payload.ip.src[3]; 
-			
+			if (strcmp(command, NICK) == 0) {			
 				if(isUsernameDuplicated(arg1) == 0) {
 					printf("Deu tudo certo\n");
 					sprintf(msg, "%d OK", 0);
@@ -220,7 +245,22 @@ int main(int argc, char *argv[])
 					sprintf(msg, "%d ERROR", 1);
 					sending(argc, argv);
 				};	
+			} else if (strcmp(command, CREATE) == 0) {
+				printf("CREATE\n");
+				if(isChannelDuplicated(arg1) == 0) {
+					printf("Deu tudo certo\n");
+					sprintf(msg, "%d OK", 0);
+					sending(argc, argv);
+				} else {
+					printf("Já existe esse channel \n");
+					sprintf(msg, "%d ERROR", 1);
+					sending(argc, argv);
+				}
+			} else if (strcmp(command, JOIN) == 0) {
+				printf("JOIN!\n")
 			};
+			
+			memset(&command, 0, sizeof(command));
 			
 
 			if (buffer_u.cooked_data.payload.ip.proto == PROTO_UDP && buffer_u.cooked_data.payload.udp.udphdr.dst_port == ntohs(DST_PORT)){

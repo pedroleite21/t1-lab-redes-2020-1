@@ -38,12 +38,15 @@ const char* KICK = "KICK";
 const char* MSG = "MSG";
 const char* PRIVMSG = "PRIVMSG";
 const char* QUIT = "QUIT";
+const char* LIST = "LIST";
 
 union eth_buffer buffer_u;
 struct ifaddrs *id;
 
 int hasUser = 1;
-char user[10];
+char user[20];
+int hasChannel = 1;
+char channel[20];
 
 //send
 	struct ifreq if_idx, if_mac, ifopts;
@@ -231,40 +234,75 @@ void sending(int argc, char *argv[]){
 		printf("Send failed\n");
 }
 
+void clear_keyboard_buffer(void)
+{
+    int c = 0;
+    while ((c = getchar()) != '\n' && c != EOF) {}
+    return;
+}
+
 int sendTerminal(int argc, char *argv[]) {
 	char command[15];
+	char command2[15];
 	char *arg;
+	char *arg2;
 
 	int ret;
 
 	printf("Bem vindo ao Bate-Papo\n");
+	
+	char line[1024];
 
 	while(1) {
 		if (hasUser == 1) {
 			printf("Você não tem um NICK definido\n");
 			printf("Exemplo: /nick user\n");
-			fflush(stdin);
-			scanf("/%s %s", command, &arg);
-			toUppercase(command);
-			if (strcmp(command, NICK) == 0) {
-				// enviar pro servidor se tem user name disponivel
-				sprintf(msg, "%s %s", command, &arg);
-				sending(argc, argv);
-				// wait for confirmation
-				ret = receiveConfirmation(argc,argv);
-				printf("%d\n", ret);
-				if (ret == 0) {
-					hasUser = 0;
-					strcpy(user, &arg);
-				} else {
-					printf("Já tem esse user na nossa database\n");
-					return -1;
-				}
-			}
-		} else {
-			printf("Bem vindo user %s", &user);
-			scanf("%s %s", command, &arg);
+		} else if ((hasUser == 0) && (hasChannel != 0)) {
+			printf("Bem vindo %s\n", &user);
+			printf("LIST CHANNELS, JOIN CHANNEL or CREATE CHANNEL\n");
+			printf("Exemplo: /list; /join <channel> or /create <channel>\n");
+		} else if ((hasUser == 0) && (hasChannel == 0)) {
+			fflush(stdout);
+			printf("Bem vindo ao channel %s, %s\n", &channel, &user);
 		}
+		fflush(stdin);
+		if(fgets(line, sizeof(line), stdin)!=NULL) {
+		  puts(line);
+	   	}
+		sscanf(line, "/%s %s", command, &arg);
+		fflush(stdin);
+		fflush(stdout);
+		toUppercase(command);
+		if (strcmp(command, NICK) == 0) {
+			// enviar pro servidor se tem user name disponivel
+			sprintf(msg, "%s %s", command, &arg);
+			sending(argc, argv);
+			// wait for confirmation
+			ret = receiveConfirmation(argc,argv);
+			
+			if (ret == 0) {
+				hasUser = 0;
+				strcpy(user, &arg);
+			} else {
+				printf("Já tem esse user na nossa database. Tente outro user\n");
+				return -1;
+			}
+		} else if (strcmp(command, LIST) == 0) {
+			printf("LIST\n");
+		} else if (strcmp(command, JOIN) == 0) {
+			printf("JOIN\n");
+		} else if (strcmp(command, CREATE) == 0) {
+			sprintf(msg, "%s %s", command, &arg);
+			sending(argc, argv);
+			ret = receiveConfirmation(argc,argv);
+			if (ret == 0) {
+				hasChannel = 0;
+				strcpy(channel, &arg);
+			} else {
+				printf("Este channel já existe, dê um /join %s para entrar nele\n", &arg);
+			}
+		};
+		memset(&command, 0, sizeof(command));
 	}
 	
 	return 0;
