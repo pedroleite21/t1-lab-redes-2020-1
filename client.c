@@ -288,9 +288,13 @@ int sendTerminal(int argc, char *argv[]) {
 				return -1;
 			}
 		} else if (strcmp(command, LIST) == 0) {
-			printf("LIST\n");
+			sprintf(msg, "%s %s", command, &arg);
+			sending(argc, argv);
+			ret = receiveConfirmation(argc,argv);
 		} else if (strcmp(command, JOIN) == 0) {
-			printf("JOIN\n");
+			sprintf(msg, "%s %s", command, &arg);
+			sending(argc, argv);
+			ret = receiveConfirmation(argc,argv);
 		} else if (strcmp(command, CREATE) == 0) {
 			sprintf(msg, "%s %s", command, &arg);
 			sending(argc, argv);
@@ -303,6 +307,7 @@ int sendTerminal(int argc, char *argv[]) {
 			}
 		};
 		memset(&command, 0, sizeof(command));
+		memset(&arg, 0, sizeof(arg));
 	}
 	
 	return 0;

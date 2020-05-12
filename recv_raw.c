@@ -177,6 +177,23 @@ void sending(int argc, char *argv[]){
 		printf("Send failed\n");
 }
 
+void sendChannels() {
+	char *listChannels;
+	char *channel;
+	int i = 0;
+	for (i; i < sizeof(channels); i++) {
+		if (channels[i].name != NULL) {
+			sprintf(&channel, ";%s", &channels[i].name);
+			printf("%s", &channel);
+			// strcat(listChannels, channel);
+		} else {
+			break;
+		};
+	};
+	printf("%s\n", &listChannels);
+	strcpy(msg, &listChannels);
+};
+
 int main(int argc, char *argv[])
 {
 	struct ifreq ifopts;
@@ -257,10 +274,24 @@ int main(int argc, char *argv[])
 					sending(argc, argv);
 				}
 			} else if (strcmp(command, JOIN) == 0) {
-				printf("JOIN!\n")
+				printf("JOIN!\n");
+				if(isChannelDuplicated(arg1) == 0) {
+					printf("Não existe esse channel \n");
+					sprintf(msg, "%d ERROR", 1);
+					sending(argc, argv);
+				} else {
+					printf("Tá dentro\n");
+					sprintf(msg, "%d OK", 0);
+					sending(argc, argv);
+				}
+			} else if (strcmp(command, LIST) == 0) {
+				printf("LIST\n");
+				sendChannels();
+				sending(argc, argv);
 			};
 			
 			memset(&command, 0, sizeof(command));
+			memset(&arg1, 0, sizeof(arg1));
 			
 
 			if (buffer_u.cooked_data.payload.ip.proto == PROTO_UDP && buffer_u.cooked_data.payload.udp.udphdr.dst_port == ntohs(DST_PORT)){
