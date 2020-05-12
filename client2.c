@@ -87,24 +87,22 @@ int receiveConfirmation(int argc, char *argv[]) {
 
 	while(1) {
 		numbytes = recvfrom(sockfd, buffer_u.raw_data, ETH_LEN, MSG_DONTWAIT , NULL, NULL);
+		// printf("got a packet, %d bytes\n", numbytes);
 		if (
 			buffer_u.cooked_data.ethernet.eth_type == ntohs(ETH_P_IP) 
-			&& buffer_u.cooked_data.payload.ip.src[0] == 10
-			&& buffer_u.cooked_data.payload.ip.src[1] == 0
-			&& buffer_u.cooked_data.payload.ip.src[2] == 0
-			&& buffer_u.cooked_data.payload.ip.src[3] == 22
 			&& buffer_u.cooked_data.payload.ip.dst[0] == 10
 			&& buffer_u.cooked_data.payload.ip.dst[1] == 0
 			&& buffer_u.cooked_data.payload.ip.dst[2] == 0
-			&& buffer_u.cooked_data.payload.ip.dst[3] == 20
+			&& buffer_u.cooked_data.payload.ip.dst[3] == 21
 			&& numbytes > 0
 		)	{
 			sscanf((char *)&buffer_u.cooked_data.payload.udp.udphdr + sizeof(struct udp_hdr), "%d %s", &confirmation, &message);
 			return confirmation;
+			// break;
 		};
 	};
 
-	return 1;
+	return 0;
 }
 
 void receive(int argc, char *argv[]){
@@ -133,33 +131,15 @@ void receive(int argc, char *argv[]){
 			&& buffer_u.cooked_data.payload.ip.dst[0] == 10
 			&& buffer_u.cooked_data.payload.ip.dst[1] == 0
 			&& buffer_u.cooked_data.payload.ip.dst[2] == 0
-			&& buffer_u.cooked_data.payload.ip.dst[3] == 20
+			&& buffer_u.cooked_data.payload.ip.dst[3] == 21
 			&& numbytes > 0
 		){
 			fromClient = (char *)&buffer_u.cooked_data.payload.udp.udphdr + sizeof(struct udp_hdr);
 			if (fromClient[0] == '#') {
 				printf("%s\n", fromClient);				
 			}
-			// printf("IP packet, %d bytes - src ip: %d.%d.%d.%d dst ip: %d.%d.%d.%d proto: %d\n",
-				// numbytes,
-				// buffer_u.cooked_data.payload.ip.src[0], buffer_u.cooked_data.payload.ip.src[1],
-				// buffer_u.cooked_data.payload.ip.src[2], buffer_u.cooked_data.payload.ip.src[3],
-				// buffer_u.cooked_data.payload.ip.dst[0], buffer_u.cooked_data.payload.ip.dst[1],
-				// buffer_u.cooked_data.payload.ip.dst[2], buffer_u.cooked_data.payload.ip.dst[3],
-				// buffer_u.cooked_data.payload.ip.proto
-			// );
-			if (buffer_u.cooked_data.payload.ip.proto == PROTO_UDP && buffer_u.cooked_data.payload.udp.udphdr.dst_port == ntohs(DST_PORT)){
-				p = (char *)&buffer_u.cooked_data.payload.udp.udphdr + ntohs(buffer_u.cooked_data.payload.udp.udphdr.udp_len);
-				*p = '\0';
-				printf("src port: %d dst port: %d size: %d msg: %s", 
-				ntohs(buffer_u.cooked_data.payload.udp.udphdr.src_port), ntohs(buffer_u.cooked_data.payload.udp.udphdr.dst_port),
-				ntohs(buffer_u.cooked_data.payload.udp.udphdr.udp_len), (char *)&buffer_u.cooked_data.payload.udp.udphdr + sizeof(struct udp_hdr)
-				); 
-			}
 			continue;
 		}
-				
-		// printf("got a packet, %d bytes\n", numbytes);
 	}
 
 }
@@ -228,7 +208,7 @@ void sending(int argc, char *argv[]){
 	buffer_u.cooked_data.payload.ip.src[0] = 10;
 	buffer_u.cooked_data.payload.ip.src[1] = 0;
 	buffer_u.cooked_data.payload.ip.src[2] = 0;
-	buffer_u.cooked_data.payload.ip.src[3] = 20;
+	buffer_u.cooked_data.payload.ip.src[3] = 21;
 	buffer_u.cooked_data.payload.ip.dst[0] = 10;
 	buffer_u.cooked_data.payload.ip.dst[1] = 0;
 	buffer_u.cooked_data.payload.ip.dst[2] = 0;

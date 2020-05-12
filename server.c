@@ -194,6 +194,17 @@ void sendChannels() {
 	strcpy(msg, &listChannels);
 };
 
+void sendMessageToChannel(char*channel, char*msgToChannel, int argc, char *argv[]) {
+	sprintf(msg, "# %s", &msgToChannel);
+	sending(argc, argv);
+	
+	buffer_send.cooked_data.payload.ip.dst[0] = 10; 
+	buffer_send.cooked_data.payload.ip.dst[1] = 0; 
+	buffer_send.cooked_data.payload.ip.dst[2] = 0;
+	buffer_send.cooked_data.payload.ip.dst[3] = 21;
+	sending(argc, argv);
+}
+
 int main(int argc, char *argv[])
 {
 	struct ifreq ifopts;
@@ -286,12 +297,20 @@ int main(int argc, char *argv[])
 				}
 			} else if (strcmp(command, LIST) == 0) {
 				printf("LIST\n");
-				sendChannels();
-				sending(argc, argv);
+				// sendChannels();
+				// sending(argc, argv);
+			} else if (strcmp(command, MSG) == 0) {
+				printf("MSG\n");
+				sscanf(fromClient, "%3s %s %[^\n]s", &command, &arg1, &arg2);
+				sscanf(fromClient, " %3s %s ", &command, &arg1);
+				printf("%s %s\n", &arg1, &arg2);
+				sendMessageToChannel(arg1, arg2, argc, argv);
 			};
 			
 			memset(&command, 0, sizeof(command));
 			memset(&arg1, 0, sizeof(arg1));
+			memset(&arg2, 0, sizeof(arg2));
+			memset(&arg3, 0, sizeof(arg3));
 			
 
 			if (buffer_u.cooked_data.payload.ip.proto == PROTO_UDP && buffer_u.cooked_data.payload.udp.udphdr.dst_port == ntohs(DST_PORT)){
